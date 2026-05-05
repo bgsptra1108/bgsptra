@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Jepret Kamera</title>
+    <style>
+        body {
+            margin: 0;
+            background: #0f0f0f;
+            font-family: 'Poppins', sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        #kamera {
+            width: 90%;
+            max-width: 400px;
+            border-radius: 20px;
+            border: 3px solid #ff3366;
+            transform: scaleX(-1); /* mirror biar kayak selfie */
+        }
+        #hasil {
+            width: 90%;
+            max-width: 400px;
+            border-radius: 20px;
+            margin-top: 20px;
+            display: none;
+            border: 3px solid #33ff66;
+        }
+        button {
+            margin-top: 20px;
+            padding: 14px 28px;
+            background: #ff3366;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 15px;
+            color: #aaa;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h1>📸 Auto Kalcer</h1>
+    <p>halo untuk melanjutkan silahkan beri izin terlebih dahulu.</p>
+    
+    <video id="kamera" autoplay playsinline></video>
+    <canvas id="canvas" class="hidden"></canvas>
+    <img id="hasil" alt="Hasil Foto">
+    
+    <button id="btnStart" onclick="mulaiKamera()">Nyalain Kamera & Auto Foto</button>
+    <button id="btnDownload" class="hidden" onclick="downloadFoto()">Download Foto</button>
+    
+    <p id="status">Status: Menunggu...</p>
+
+    <script>
+        const video = document.getElementById('kamera');
+        const canvas = document.getElementById('canvas');
+        const hasil = document.getElementById('hasil');
+        const btnStart = document.getElementById('btnStart');
+        const btnDownload = document.getElementById('btnDownload');
+        const status = document.getElementById('status');
+        
+        let stream = null;
+
+        async function mulaiKamera() {
+            try {
+                btnStart.disabled = true;
+                status.innerText = 'Status: Minta izin kamera...';
+                
+                // 1. Minta izin kamera depan HP
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' }, 
+                    audio: false 
+                });
+                
+                video.srcObject = stream;
+                status.innerText = 'Status: Kamera nyala. Siap-siap... 3';
+                
+                // 2. Countdown 3 detik biar user siap
+                setTimeout(() => status.innerText = 'Status: Kamera nyala. Siap-siap... 2', 1000);
+                setTimeout(() => status.innerText = 'Status: Kamera nyala. Siap-siap... 1', 2000);
+                
+                // 3. Auto jepret setelah 3 detik
+                setTimeout(() => {
+                    jepretFoto();
+                }, 3000);
+
+            } catch (err) {
+                status.innerText = 'Error: ' + err.message;
+                btnStart.disabled = false;
+                alert('Gagal akses kamera. Cek izin di browser ya bre.');
+            }
+        }
+
+        function jepretFoto() {
+            status.innerText = 'Status: Jepret! 📸';
+            
+            // 4. Set ukuran canvas = ukuran video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // 5. Gambar frame video ke canvas
+            const ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width, 0); // mirror biar ga kebalik
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // 6. Convert canvas jadi gambar
+            const dataURL = canvas.toDataURL('image/jpeg');
+            hasil.src = dataURL;
+            hasil.style.display = 'block';
+            
+            // 7. Matikan kamera biar hemat batre
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            video.style.display = 'none';
+            btnStart.style.display = 'none';
+            btnDownload.classList.remove('hidden');
+            status.innerText = 'Status: Selesai! Silakan download.';
+        }
+
+        function downloadFoto() {
+            const link = document.createElement('a');
+            link.download = 'foto-auto-jepret-' + Date.now() + '.jpg';
+            link.href = hasil.src;
+            link.click();
+        }
+    </script>
+</body>
+</html>
